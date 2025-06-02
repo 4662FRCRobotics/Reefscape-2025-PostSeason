@@ -8,6 +8,7 @@ import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 
 import org.photonvision.PhotonCamera;
+import org.photonvision.targeting.PhotonTrackedTarget;
 
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -77,7 +78,7 @@ public class DriveSubsystem extends SubsystemBase {
             new Pose2d());
     private final Field2d m_field = new Field2d();
 
- // PhotonCamera m_driverCameraOne;
+  PhotonCamera m_aprilCameraOne;
   PhotonCamera m_driverCameraTwo;
 
   /** Creates a new DriveSubsystem. */
@@ -119,8 +120,8 @@ public class DriveSubsystem extends SubsystemBase {
 
     SmartDashboard.putData("Field", m_field);
 
-   // m_driverCameraOne = new PhotonCamera(DriveConstants.kCameraOne);
-   // m_driverCameraOne.setDriverMode(true);
+    m_aprilCameraOne = new PhotonCamera(DriveConstants.kCameraOne);
+    m_aprilCameraOne.setDriverMode(false);
     m_driverCameraTwo = new PhotonCamera(DriveConstants.kCameraTwo);
     m_driverCameraTwo.setDriverMode(true);
 
@@ -137,6 +138,31 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearLeft.getPosition(),
             m_rearRight.getPosition()
         });*/
+    double yaw = 0;
+    double pitch = 0;
+    double area = 0;
+    double skew = 0;
+    int targetID = 0;
+
+    var april1Result = m_aprilCameraOne.getLatestResult();
+    boolean hasTargets = april1Result.hasTargets();
+    if (hasTargets) {
+      PhotonTrackedTarget target = april1Result.getBestTarget();
+      yaw = target.getYaw();
+      pitch = target.getPitch();
+      area = target.getArea();
+      skew = target.getSkew();
+      targetID = target.getFiducialId();
+    } else { 
+
+    }
+    
+    SmartDashboard.putNumber("Yaw" , yaw);
+    SmartDashboard.putNumber("Pitch" , pitch);
+    SmartDashboard.putNumber("Area" , area);
+    SmartDashboard.putNumber("Skew" , skew);
+    SmartDashboard.putNumber("Target ID" , targetID);
+
     m_poseEstimator.update(
       getHeading(),
       getModulePositions()

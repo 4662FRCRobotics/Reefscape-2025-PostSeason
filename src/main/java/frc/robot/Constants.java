@@ -58,7 +58,7 @@ public final class Constants {
 
     public static final boolean kGyroReversed = false;
 
-    public static final String kCameraOne = "HD_Webcam_C615";
+    public static final String kCameraOne = "Arducam_OV9281_USB_Camera";
     public static final String kCameraTwo = "HD_USB_Camera";
   }
 
