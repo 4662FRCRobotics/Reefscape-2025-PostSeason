@@ -7,13 +7,24 @@ package frc.robot.subsystems;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 
+import java.util.Optional;
+
+import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 //import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -56,6 +67,11 @@ public class DriveSubsystem extends SubsystemBase {
       DriveConstants.kRearRightTurningCanId,
       DriveConstants.kBackRightChassisAngularOffset);
 
+  private static final AprilTagFieldLayout m_fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+  private static final Transform3d kRobotToCam = 
+    new Transform3d(new Translation3d(0.185, 0.22, 0.3), new Rotation3d(0, 0, 0));
+  private PhotonPoseEstimator photonEstimator = 
+    new PhotonPoseEstimator(m_fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, kRobotToCam);
   // The gyro sensor
   private final ADIS16470_IMU m_gyro = new ADIS16470_IMU(ADIS16470_IMU.IMUAxis.kY, ADIS16470_IMU.IMUAxis.kX, ADIS16470_IMU.IMUAxis.kZ);
 
@@ -143,18 +159,25 @@ public class DriveSubsystem extends SubsystemBase {
     double area = 0;
     double skew = 0;
     int targetID = 0;
-
+    Optional<Pose3d> target3d;
+    Optional<EstimatedRobotPose> visionEst = Optional.empty();
     var april1Result = m_aprilCameraOne.getLatestResult();
     boolean hasTargets = april1Result.hasTargets();
     if (hasTargets) {
       PhotonTrackedTarget target = april1Result.getBestTarget();
+      visionEst = photonEstimator.update(april1Result);
       yaw = target.getYaw();
       pitch = target.getPitch();
       area = target.getArea();
       skew = target.getSkew();
       targetID = target.getFiducialId();
+      target3d = m_fieldLayout.getTagPose(targetID);
+     if (visionEst.isPresent()) {
+        target3d = Optional.of(visionEst.get().estimatedPose);
+      }
     } else { 
-
+      target3d = Optional.empty();
+      visionEst = Optional.empty();
     }
     
     SmartDashboard.putNumber("Yaw" , yaw);
@@ -168,7 +191,11 @@ public class DriveSubsystem extends SubsystemBase {
       getModulePositions()
       );
 
-    m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
+    if (target3d.isEmpty()) {
+      m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
+    } else {
+      m_field.setRobotPose(target3d.get().toPose2d());
+    }
   }
 
   /**
