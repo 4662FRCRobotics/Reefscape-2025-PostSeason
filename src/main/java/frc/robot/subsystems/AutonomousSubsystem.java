@@ -10,7 +10,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
 import frc.robot.libraries.ConsoleAuto;
 
-//There is a 95% chance that it will crash if you try to run auto so dont
 // Something interesting I found was DriverStation.getMatchTime() It returns how much time is left, might be useful.
 
 public class AutonomousSubsystem extends SubsystemBase{

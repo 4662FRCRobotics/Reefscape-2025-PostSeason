@@ -25,6 +25,7 @@ import frc.robot.libraries.ConsoleAuto;
 import frc.robot.subsystems.AutonomousSubsystem;
 import frc.robot.subsystems.CameraServoSubsystem;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.DriveSubsystem.BranchSide;
 import frc.robot.subsystems.ElevatorSubsystem;
 import frc.robot.subsystems.HandSubsystem;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -121,7 +122,12 @@ public class RobotContainer {
     new Trigger(RobotModeTriggers.disabled())
     .onFalse(Commands.runOnce(this::runAutoConsoleFalse))
     ;
-  
+  m_driverController.a().onTrue(m_robotDrive.cmdSetBranchSide(BranchSide.LEFT));
+  m_driverController.a().onFalse(m_robotDrive.cmdSetBranchSide(BranchSide.MIDDLE));
+
+  m_driverController.b().onTrue(m_robotDrive.cmdSetBranchSide(BranchSide.RIGHT));
+  m_driverController.b().onFalse(m_robotDrive.cmdSetBranchSide(BranchSide.MIDDLE));
+
     m_operatorController.a() 
         .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kTroughInches));
     m_operatorController.x()

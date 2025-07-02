@@ -24,6 +24,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -37,6 +38,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.Constants.DriveConstants;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.PathPlannerAuto;
@@ -94,8 +96,28 @@ public class DriveSubsystem extends SubsystemBase {
             new Pose2d());
     private final Field2d m_field = new Field2d();
 
-  PhotonCamera m_aprilCameraOne;
-  PhotonCamera m_driverCameraTwo;
+    PhotonCamera m_aprilCameraOne;
+    PhotonCamera m_driverCameraTwo;
+private BranchSide m_side = BranchSide.MIDDLE;
+
+  public enum BranchSide{
+    LEFT(new Translation2d(-0.153209, 0.5406845 + 0.02)),
+    RIGHT(new Translation2d(0.218062 - 0.0508, 0.5408565 + 0.02)),
+    MIDDLE(new Translation2d(0.064853, 0.5408565 + 0.02));
+    
+    public Translation2d tagOffset;
+    private BranchSide(Translation2d offsets) {
+      tagOffset = offsets;
+    }
+
+    public BranchSide mirror() {
+      switch (this) {
+        case LEFT: return RIGHT;
+        case MIDDLE: return MIDDLE;
+        default: return LEFT;
+      }
+    }
+  }
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
@@ -172,30 +194,39 @@ public class DriveSubsystem extends SubsystemBase {
       skew = target.getSkew();
       targetID = target.getFiducialId();
       target3d = m_fieldLayout.getTagPose(targetID);
-     if (visionEst.isPresent()) {
+    /*  if (visionEst.isPresent()) {
         target3d = Optional.of(visionEst.get().estimatedPose);
-      }
+      }*/
     } else { 
       target3d = Optional.empty();
       visionEst = Optional.empty();
     }
     
+    SmartDashboard.putString("Branch side", m_side.name());
     SmartDashboard.putNumber("Yaw" , yaw);
     SmartDashboard.putNumber("Pitch" , pitch);
     SmartDashboard.putNumber("Area" , area);
     SmartDashboard.putNumber("Skew" , skew);
     SmartDashboard.putNumber("Target ID" , targetID);
+    SmartDashboard.putNumber("Gyro" , getHeading().getDegrees());
 
     m_poseEstimator.update(
       getHeading(),
       getModulePositions()
       );
 
-    if (target3d.isEmpty()) {
-      m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
-    } else {
-      m_field.setRobotPose(target3d.get().toPose2d());
-    }
+    if (!visionEst.isEmpty()) {
+      m_poseEstimator.resetPose(visionEst.get().estimatedPose.toPose2d());
+    } 
+    m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
+  }
+
+  void setSide(BranchSide side){
+    m_side = side;
+  }
+
+  public Command cmdSetBranchSide(BranchSide side){
+    return Commands.runOnce(()-> setSide(side),this);
   }
 
   /**
@@ -315,7 +346,7 @@ public class DriveSubsystem extends SubsystemBase {
    * @return the robot's heading in degrees, from -180 to 180
    */
   public Rotation2d getHeading() {
-    return Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ));
+    return Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kY));
   }
 
   /**
@@ -353,8 +384,30 @@ public class DriveSubsystem extends SubsystemBase {
     };
   }
 
+  //-------PATH PLANNER---------
+
+  //auto prebuild path
   public Command getPathStep(String pathName) {
 
       return new PathPlannerAuto(pathName);
   }
+
+  //returns target branch pos/cor
+  private static Pose2d getBranchFromTag(Pose2d tag, BranchSide side) {
+    var translation = tag.getTranslation().plus(
+      new Translation2d(
+        side.tagOffset.getY(),
+        side.tagOffset.getX()
+      ).rotateBy(tag.getRotation())
+    );
+
+    return new Pose2d(
+      translation.getX(),
+      translation.getY(),
+      tag.getRotation()
+    );
+  }
+
+
+
 }
