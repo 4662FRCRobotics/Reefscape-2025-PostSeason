@@ -122,11 +122,9 @@ public class RobotContainer {
     new Trigger(RobotModeTriggers.disabled())
     .onFalse(Commands.runOnce(this::runAutoConsoleFalse))
     ;
-  m_driverController.a().onTrue(m_robotDrive.cmdSetBranchSide(BranchSide.LEFT));
-  m_driverController.a().onFalse(m_robotDrive.cmdSetBranchSide(BranchSide.MIDDLE));
+  m_driverController.a().onTrue(m_robotDrive.driveToBranch(BranchSide.LEFT));
 
-  m_driverController.b().onTrue(m_robotDrive.cmdSetBranchSide(BranchSide.RIGHT));
-  m_driverController.b().onFalse(m_robotDrive.cmdSetBranchSide(BranchSide.MIDDLE));
+  m_driverController.b().onTrue(m_robotDrive.driveToBranch(BranchSide.RIGHT));
 
     m_operatorController.a() 
         .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kTroughInches));

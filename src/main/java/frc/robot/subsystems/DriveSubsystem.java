@@ -7,7 +7,11 @@ package frc.robot.subsystems;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 
+import static edu.wpi.first.units.Units.MetersPerSecond;
+
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -31,6 +35,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 //import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -45,6 +50,10 @@ import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.IdealStartingState;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.Waypoint;
 
 
 public class DriveSubsystem extends SubsystemBase {
@@ -98,6 +107,9 @@ public class DriveSubsystem extends SubsystemBase {
 
     PhotonCamera m_aprilCameraOne;
     PhotonCamera m_driverCameraTwo;
+    boolean m_hasTargets = false;
+    PhotonTrackedTarget m_target = new PhotonTrackedTarget();
+
 private BranchSide m_side = BranchSide.MIDDLE;
 
   public enum BranchSide{
@@ -184,15 +196,15 @@ private BranchSide m_side = BranchSide.MIDDLE;
     Optional<Pose3d> target3d;
     Optional<EstimatedRobotPose> visionEst = Optional.empty();
     var april1Result = m_aprilCameraOne.getLatestResult();
-    boolean hasTargets = april1Result.hasTargets();
-    if (hasTargets) {
-      PhotonTrackedTarget target = april1Result.getBestTarget();
+    m_hasTargets = april1Result.hasTargets();
+    if (m_hasTargets) {
+      m_target = april1Result.getBestTarget();
       visionEst = photonEstimator.update(april1Result);
-      yaw = target.getYaw();
-      pitch = target.getPitch();
-      area = target.getArea();
-      skew = target.getSkew();
-      targetID = target.getFiducialId();
+      yaw = m_target.getYaw();
+      pitch = m_target.getPitch();
+      area = m_target.getArea();
+      skew = m_target.getSkew();
+      targetID = m_target.getFiducialId();
       target3d = m_fieldLayout.getTagPose(targetID);
     /*  if (visionEst.isPresent()) {
         target3d = Optional.of(visionEst.get().estimatedPose);
@@ -209,6 +221,7 @@ private BranchSide m_side = BranchSide.MIDDLE;
     SmartDashboard.putNumber("Skew" , skew);
     SmartDashboard.putNumber("Target ID" , targetID);
     SmartDashboard.putNumber("Gyro" , getHeading().getDegrees());
+    SmartDashboard.putBoolean("Has Target", m_hasTargets);
 
     m_poseEstimator.update(
       getHeading(),
@@ -392,7 +405,50 @@ private BranchSide m_side = BranchSide.MIDDLE;
       return new PathPlannerAuto(pathName);
   }
 
-  //returns target branch pos/cor
+  //returns command to drive path to a specified branch
+  public Command driveToBranch (BranchSide side) {
+    return Commands.defer(() -> {
+    if (m_hasTargets){
+       var branch = getBranchFromTag(m_fieldLayout.getTagPose(m_target.getFiducialId()).get().toPose2d(), side);
+       //return Commands.print("Has target " + m_target.getFiducialId() + side.name());
+       return getPathFromWaypoint(getWaypointFromBranch(branch));
+    } else {return Commands.print("No target");}
+    }, Set.of(this));
+  }
+
+  private LinearVelocity getVelocityMagnitude(ChassisSpeeds cs){
+    return MetersPerSecond.of(new Translation2d(cs.vxMetersPerSecond, cs.vyMetersPerSecond).getNorm());
+  }
+
+  private Command getPathFromWaypoint(Pose2d waypoint) {
+    List<Waypoint> waypoints = PathPlannerPath.waypointsFromPoses(
+      new Pose2d(getPose().getTranslation(), getPose().getRotation()), waypoint);
+    
+    PathPlannerPath path = new PathPlannerPath(
+      waypoints,
+      DriveConstants.kTeleopPathConstraints,
+      new IdealStartingState(getVelocityMagnitude(getRobotRelativeSpeeds()), getHeading()),
+      new GoalEndState(0.0, waypoint.getRotation()));
+
+    path.preventFlipping = true;
+
+    return (AutoBuilder.followPath(path))
+    .finallyDo((interupt) -> {
+      if (interupt) {
+        drive(new ChassisSpeeds(0, 0, 0), false);
+      }
+    });
+  }
+
+  //returns pathplanner waypoint with direction of travel away from associated reefside
+  private Pose2d getWaypointFromBranch(Pose2d branch){
+    return new Pose2d(
+      branch.getTranslation(),
+      branch.getRotation().rotateBy(Rotation2d.k180deg)
+    );
+  }
+
+  //returns target branch pos/coords
   private static Pose2d getBranchFromTag(Pose2d tag, BranchSide side) {
     var translation = tag.getTranslation().plus(
       new Translation2d(
