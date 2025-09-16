@@ -124,11 +124,11 @@ public class ElevatorSubsystem extends SubsystemBase {
   //  m_closedLoopElevatorLeft.setReference(m_elevatorTargetPostion, ControlType.kMAXMotionPositionControl);
   }
 
-  public Command cmdAdjustElevatorPosition(boolean isAdjustUp) {
+  public Command cmdAdjustElevatorPosition(boolean isAdjustUp, boolean isHandDown) {
     return Commands.runOnce(() -> adjustElevatorPosition(isAdjustUp) , this);
   }
 
-  public Command cmdSetElevatorPosition(double targetPosition) {
+  public Command cmdSetElevatorPosition(double targetPosition, boolean isHandDown) {
     return Commands.runOnce(() -> setElevatorPosition(targetPosition) , this);
   }
 

@@ -45,30 +45,22 @@ public class AutonomousSubsystem extends SubsystemBase{
    * after that they should be paths only
    */
   public enum AutonomousSteps {
-    WAIT1('W', 1.0, 0, 0, ""),
-    WAIT2('W', 2.0, 0, 0, ""),
-    WAITLOOP('W', 99.9, 0, 0, ""),
-    DRIVE_OUT('D', 0.0, 1, 0, "drive out - Auto"),
-    DRIVE_REEF_LEFT('D', 0.0, 1, 0, "reef barge left - auto"),
-    LIFT_ARM('L',0.0,2,0,"lift elevator")
-    //SHOOTNOTE('S', 0.0, 1),
-   // SpkrCntrOut1('D', 0.0, 2),
-   // SpkrCntrRtrn1('D', 0.0, 3),
-   // DRV_INTK_1('I', 0.5, 2),
-   // DRV_STRT_1('D', 0.0, 3, 2),
-   // DRV_BACK_1('D', 0.0, 4),
-    //DRV_INTK_2('I', 0.0, 5),
-   // DRV_STRT_2('D', 0.0, 6, 5),
-    //END('E')
+    WAIT1("W", 1.0, 0, 0, ""),
+    WAIT2("W", 2.0, 0, 0, ""),
+    WAITLOOP("W", 99.9, 0, 0, ""),
+    DRIVE_OUT("D", 0.0, 1, 0, "drive out - Auto"),
+    DRIVE_REEF_LEFT("D", 0.0, 1, 0, "reef barge left - auto"),
+    ELEVATOR_LVL4("L",0.0,2,0,"lift elevator"),
+    DRIVE_TO_REEF_RIGHT("D2R" , 0.0 , 3 , 0 , "right")
     ;
 
-    private final char m_stepCmd;
+    private final String m_stepCmd;
     private final double m_waitTime;
     private final int m_iSwATrue;
     private final int m_iSwBFalse;
     private final String m_planName;
 
-    private AutonomousSteps(char cstepCmd, double dWaitTime, int iSwATrue, int iSwBFalse, String planName) {
+    private AutonomousSteps(String cstepCmd, double dWaitTime, int iSwATrue, int iSwBFalse, String planName) {
       this.m_stepCmd = cstepCmd;
       this.m_waitTime = dWaitTime;
       this.m_iSwATrue = iSwATrue;
@@ -97,7 +89,7 @@ public class AutonomousSubsystem extends SubsystemBase{
       this.m_iSwBFalse = 0;
     }*/
 
-    public char getStepStruc() {
+    public String getStepStruc() {
       return m_stepCmd;
     }
 
@@ -181,8 +173,10 @@ public class AutonomousSubsystem extends SubsystemBase{
             //AutonomousSteps.SpkrCntrRtrn1
           },
       //REEF LEFT
-          {AutonomousSteps.WAITLOOP
-            // AutonomousSteps.DRIVE_REEF_LEFT
+          {AutonomousSteps.WAITLOOP,
+             AutonomousSteps.DRIVE_REEF_LEFT,
+             AutonomousSteps.ELEVATOR_LVL4,
+             AutonomousSteps.DRIVE_TO_REEF_RIGHT
            // AutonomousSteps.SHOOTNOTE
           },
       //REEF RIGHT
@@ -191,14 +185,14 @@ public class AutonomousSubsystem extends SubsystemBase{
           },      // lift arm
           {AutonomousSteps.WAITLOOP,
               AutonomousSteps.DRIVE_OUT,
-            AutonomousSteps.LIFT_ARM}
+            AutonomousSteps.ELEVATOR_LVL4}
     };
 
     if (m_autoStep.length < m_cmdSteps.length ) {
       System.out.println("WARNING - Auto Commands LT Command Steps");
     }
     // more? like more commands than supported by the switch
-
+    // printline means a discrepancy in the auto steps selected
   }
 
   private void fmtDisplay(int ix) {
@@ -325,7 +319,7 @@ public class AutonomousSubsystem extends SubsystemBase{
 
     Command workCmd = Commands.print("command not found for " + autoStep.name());
     switch (autoStep.getStepStruc()) {
-      case 'W':
+      case "W":
         double waitTime = autoStep.getWaitTIme();
        // workCmd = getWaitCommand(waitTime == 99.9 ? m_ConsoleAuto.getROT_SW_1() : waitTime);
        if (waitTime == 99.9) {
@@ -335,16 +329,16 @@ public class AutonomousSubsystem extends SubsystemBase{
        }
 
         break;
-      case 'D':
+      case "D":
         workCmd =  m_robotContainer.getDrivePlanCmd(autoStep.getplanName());
        // workCmd = Commands.print("Drive command");
         break;
-      case 'L':
+      case "L":
           workCmd = m_robotContainer.getLiftCmd();
       break;
-      case 'I':
+      case "D2R":
        // workCmd =  m_robotContainer.getIntakePathCommand(autoStep.toString(), autoStep.getWaitTIme());
-       workCmd = Commands.print("Intake command");
+       workCmd = Commands.print("Drive to reef");
        break;
      // case 'S':
         //workCmd = getWaitCommand(2);

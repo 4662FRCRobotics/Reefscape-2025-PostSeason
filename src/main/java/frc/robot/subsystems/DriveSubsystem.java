@@ -114,7 +114,7 @@ private BranchSide m_side = BranchSide.MIDDLE;
 
   public enum BranchSide{
     LEFT(new Translation2d(-0.153209, 0.5406845 + 0.02)),
-    RIGHT(new Translation2d(0.218062 - 0.0508, 0.5408565 + 0.02)),
+    RIGHT(new Translation2d(0.2032, 0.5408565 + 0.02)),
     MIDDLE(new Translation2d(0.064853, 0.5408565 + 0.02));
     
     public Translation2d tagOffset;
