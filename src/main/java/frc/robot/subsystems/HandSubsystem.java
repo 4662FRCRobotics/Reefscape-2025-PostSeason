@@ -4,6 +4,8 @@
 
 package frc.robot.subsystems;
 
+import java.util.function.BooleanSupplier;
+
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
@@ -136,5 +138,9 @@ public class HandSubsystem extends SubsystemBase {
 
   public boolean isHandDown() {
     return m_handTargetPosition >= (HandConstants.kHandDown) - 25;
+  }
+
+  public BooleanSupplier isHandDownSplr() {
+    return () -> isHandDown();
   }
 }

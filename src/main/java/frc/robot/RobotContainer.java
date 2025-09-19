@@ -127,21 +127,21 @@ public class RobotContainer {
   m_driverController.b().onTrue(m_robotDrive.driveToBranch(BranchSide.RIGHT));
 
     m_operatorController.a() 
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kTroughInches, m_HandSubsystem.isHandDown()));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kTroughInches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.x()
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel2Inches, m_HandSubsystem.isHandDown()));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel2Inches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.b()
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel3Inches, m_HandSubsystem.isHandDown()));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel3Inches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.y()
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_HandSubsystem.isHandDown()));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.leftBumper()
         .whileTrue(Commands.run(()->m_elevator.runMotor(0)));
    // m_operatorController.rightBumper()
-  //      .onTrue(m_elevator.cmdElevatorZero());
+  //      .onTrue(m_elevator.cmdElevatorZero(m_HandSubsystem.isHandDownSplr()));
     m_operatorController.povUp()
-        .onTrue(m_elevator.cmdAdjustElevatorPosition(true, m_HandSubsystem.isHandDown()));
+        .onTrue(m_elevator.cmdAdjustElevatorPosition(true, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.povDown()
-        .onTrue(m_elevator.cmdAdjustElevatorPosition(false, m_HandSubsystem.isHandDown()));
+        .onTrue(m_elevator.cmdAdjustElevatorPosition(false, m_HandSubsystem.isHandDownSplr()));
     new Trigger(() -> m_elevator.isElevatorStalled())
         .onTrue(m_elevator.cmdStopElevator());
     m_operatorController.leftTrigger()
@@ -193,6 +193,6 @@ public class RobotContainer {
   }
 
   public Command getLiftCmd(){
-    return m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_HandSubsystem.isHandDown());
+    return m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_HandSubsystem.isHandDownSplr());
   }
 }
