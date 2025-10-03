@@ -48,7 +48,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     m_elevatorI = 0;
     m_elevatorD = 0;
     m_motorElevatorLeft = new SparkMax(ElevatorConstants.motorElevatorLeft, MotorType.kBrushless);
-      m_motorConfigLeft = new SparkMaxConfig();
+    m_motorConfigLeft = new SparkMaxConfig();
       m_motorConfigLeft.idleMode(IdleMode.kBrake)
         .smartCurrentLimit(ElevatorConstants.kCurrentLimit)
         .secondaryCurrentLimit(ElevatorConstants.kSecondaryCurrentLimit);
@@ -62,12 +62,12 @@ public class ElevatorSubsystem extends SubsystemBase {
         .maxAcceleration(2500)
         .maxVelocity(5000)
         .allowedClosedLoopError(1);
-      m_motorSoftLimitLeft = new SoftLimitConfig();
-      m_motorSoftLimitLeft.forwardSoftLimit(ElevatorConstants.kFwdSoftLimit)
+    m_motorSoftLimitLeft = new SoftLimitConfig();
+    m_motorSoftLimitLeft.forwardSoftLimit(ElevatorConstants.kFwdSoftLimit)
         .forwardSoftLimitEnabled(true)
         .reverseSoftLimit(ElevatorConstants.kRevSoftLimit)
         .reverseSoftLimitEnabled(true);
-        
+    m_motorConfigLeft.apply(m_motorSoftLimitLeft);
     m_closedLoopElevatorLeft = m_motorElevatorLeft.getClosedLoopController();
     m_motorElevatorLeft.configure(m_motorConfigLeft, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     m_motorElevatorRight = new SparkMax(ElevatorConstants.motorElevatorRight, MotorType.kBrushless);
