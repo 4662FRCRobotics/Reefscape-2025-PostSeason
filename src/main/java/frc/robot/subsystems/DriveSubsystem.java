@@ -83,6 +83,7 @@ public class DriveSubsystem extends SubsystemBase {
     new Transform3d(new Translation3d(0.185, 0.22, 0.3), new Rotation3d(0, 0, 0));
   private PhotonPoseEstimator photonEstimator = 
     new PhotonPoseEstimator(m_fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, kRobotToCam);
+  private Optional<EstimatedRobotPose> m_visionEst = Optional.empty();
   // The gyro sensor
   private final ADIS16470_IMU m_gyro = new ADIS16470_IMU(ADIS16470_IMU.IMUAxis.kY, ADIS16470_IMU.IMUAxis.kX, ADIS16470_IMU.IMUAxis.kZ);
 
@@ -194,12 +195,12 @@ private BranchSide m_side = BranchSide.MIDDLE;
     double skew = 0;
     int targetID = 0;
     Optional<Pose3d> target3d;
-    Optional<EstimatedRobotPose> visionEst = Optional.empty();
+    //Optional<EstimatedRobotPose> visionEst = Optional.empty();
     var april1Result = m_aprilCameraOne.getLatestResult();
     m_hasTargets = april1Result.hasTargets();
     if (m_hasTargets) {
       m_target = april1Result.getBestTarget();
-      visionEst = photonEstimator.update(april1Result);
+      m_visionEst = photonEstimator.update(april1Result);
       yaw = m_target.getYaw();
       pitch = m_target.getPitch();
       area = m_target.getArea();
@@ -211,7 +212,7 @@ private BranchSide m_side = BranchSide.MIDDLE;
       }*/
     } else { 
       target3d = Optional.empty();
-      visionEst = Optional.empty();
+      m_visionEst = Optional.empty();
     }
     
     SmartDashboard.putString("Branch side", m_side.name());
@@ -228,9 +229,9 @@ private BranchSide m_side = BranchSide.MIDDLE;
       getModulePositions()
       );
 
-    if (!visionEst.isEmpty()) {
-      m_poseEstimator.resetPose(visionEst.get().estimatedPose.toPose2d());
-    } 
+    //if (!visionEst.isEmpty()) {
+    //  m_poseEstimator.resetPose(visionEst.get().estimatedPose.toPose2d());
+    //} 
     m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
   }
 
@@ -421,6 +422,7 @@ private BranchSide m_side = BranchSide.MIDDLE;
   }
 
   private Command getPathFromWaypoint(Pose2d waypoint) {
+    m_poseEstimator.resetPose(m_visionEst.get().estimatedPose.toPose2d());
     List<Waypoint> waypoints = PathPlannerPath.waypointsFromPoses(
       new Pose2d(getPose().getTranslation(), getPose().getRotation()), waypoint);
     
@@ -433,6 +435,7 @@ private BranchSide m_side = BranchSide.MIDDLE;
     path.preventFlipping = true;
 
     return (AutoBuilder.followPath(path))
+    //.beforeStarting(() -> {m_poseEstimator.resetPose(m_visionEst.get().estimatedPose.toPose2d());} , this)
     .finallyDo((interupt) -> {
       if (interupt) {
         drive(new ChassisSpeeds(0, 0, 0), false);
