@@ -143,6 +143,7 @@ public final class Constants {
     public static final double kEncoderDegrees = 360 / kGearRatio;
     public static final double kHandUp = -170 / kEncoderDegrees; // angle is negative degrees
     public static final double kHandDown = 0 / kEncoderDegrees;
+    public static final double kHandScore = -125 / kEncoderDegrees;
     public static final double kHandStallCurrent = 20;
     public static final int kCurrentLimit = 20;
     public static final double kSecondaryCurrentLimit = 30;

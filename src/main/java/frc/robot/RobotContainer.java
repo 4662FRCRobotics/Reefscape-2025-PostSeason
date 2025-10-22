@@ -61,7 +61,7 @@ public class RobotContainer {
   private final CommandGenericHID m_CommandGenericHID = 
     new CommandGenericHID(OIConstants.kTeleopConsolePort);
 
-  private final AutonomousSubsystem m_AutonomousSubsystem = new AutonomousSubsystem(m_ConsoleAuto, this);
+  private final AutonomousSubsystem m_AutonomousSubsystem = new AutonomousSubsystem(m_ConsoleAuto, this, m_robotDrive, m_elevator, m_HandSubsystem);
 
   static boolean m_runAutoConsole;
   /**
@@ -188,11 +188,21 @@ public class RobotContainer {
     return m_AutonomousSubsystem.cmdAutoControl();
   }
 
+  /*
   public Command getDrivePlanCmd(String planName) {
     return m_robotDrive.getPathStep(planName);
   }
 
-  public Command getLiftCmd(){
+  public Command getLiftCmd() {
     return m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_HandSubsystem.isHandDownSplr());
   }
+
+  public Command getDriveToBranch() {
+    return m_robotDrive.driveToBranch(BranchSide.RIGHT);
+  }
+
+  public Command getHandScore() {
+    return m_HandSubsystem.cmdHandScore();
+  }
+  */
 }

@@ -23,8 +23,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants.ElevatorConstants;
-//import frc.robot.Constants.ElevatorConstants;
 import frc.robot.Constants.HandConstants;
 
 public class HandSubsystem extends SubsystemBase {
@@ -136,6 +134,10 @@ public class HandSubsystem extends SubsystemBase {
 
   public Command cmdSetHandPosition() {
     return Commands.runOnce(() -> setHandPosition() , this);
+  }
+
+  public Command cmdHandScore() {
+    return Commands.runOnce(() -> setHandPosition(HandConstants.kHandScore), this);
   }
 
   private void handZero(){

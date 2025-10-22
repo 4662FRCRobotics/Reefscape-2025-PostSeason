@@ -8,7 +8,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
+import frc.robot.Constants.ElevatorConstants;
 import frc.robot.libraries.ConsoleAuto;
+import frc.robot.subsystems.DriveSubsystem.BranchSide;
 
 // Something interesting I found was DriverStation.getMatchTime() It returns how much time is left, might be useful.
 
@@ -50,8 +52,9 @@ public class AutonomousSubsystem extends SubsystemBase{
     WAITLOOP("W", 99.9, 0, 0, ""),
     DRIVE_OUT("D", 0.0, 1, 0, "drive out - Auto"),
     DRIVE_REEF_LEFT("D", 0.0, 1, 0, "reef barge left - auto"),
-    ELEVATOR_LVL4("L",0.0,2,0,"lift elevator"),
-    DRIVE_TO_REEF_RIGHT("D2R" , 0.0 , 3 , 0 , "right")
+    ELEVATOR_LVL4("L",0.0,2,0,""),
+    DRIVE_TO_REEF_RIGHT("D2R" , 0.0 , 3 , 0 , ""),
+    HAND_SCORE("HS" , 0.0 , 4 , 0 , "")
     ;
 
     private final String m_stepCmd;
@@ -67,27 +70,6 @@ public class AutonomousSubsystem extends SubsystemBase{
       this.m_iSwBFalse = iSwBFalse;
       this.m_planName = planName;
     }
-
-  /*   private AutonomousSteps(char cstepCmd, double dWaitTime, int iSwATrue) {
-      this.m_stepCmd = cstepCmd;
-      this.m_waitTime = dWaitTime;
-      this.m_iSwATrue = iSwATrue;
-      this.m_iSwBFalse = 0;
-    }
-
-    private AutonomousSteps(char cstepCmd, double dWaitTime) {
-      this.m_stepCmd = cstepCmd;
-      this.m_waitTime = dWaitTime;
-      this.m_iSwATrue = 0;
-      this.m_iSwBFalse = 0;
-    }
-    
-    private AutonomousSteps(char cstepCmd) {
-      this.m_stepCmd = cstepCmd;
-      this.m_waitTime = 0;
-      this.m_iSwATrue = 0;
-      this.m_iSwBFalse = 0;
-    }*/
 
     public String getStepStruc() {
       return m_stepCmd;
@@ -113,6 +95,9 @@ public class AutonomousSubsystem extends SubsystemBase{
 
   ConsoleAuto m_ConsoleAuto;
   RobotContainer m_robotContainer;
+  DriveSubsystem m_drive;
+  ElevatorSubsystem m_elevator;
+  HandSubsystem m_hand;
 
   AutonomousCommands m_autoSelectCommand[] = AutonomousCommands.values();
   AutonomousCommands m_selectedCommand;
@@ -131,10 +116,17 @@ public class AutonomousSubsystem extends SubsystemBase{
   private AutonomousSteps[][] m_cmdSteps;
   private Command[] m_stepCommands;
 
-  public AutonomousSubsystem(ConsoleAuto consoleAuto, RobotContainer robotContainer) {
+  public AutonomousSubsystem(ConsoleAuto consoleAuto,
+        RobotContainer robotContainer,
+        DriveSubsystem drive,
+        ElevatorSubsystem elevator,
+        HandSubsystem hand) {
 
     m_ConsoleAuto = consoleAuto;
     m_robotContainer = robotContainer;
+    m_drive = drive;
+    m_elevator = elevator;
+    m_hand = hand;
     m_selectedCommand = m_autoSelectCommand[0];
     m_strCommand = m_selectedCommand.toString();
     m_iPatternSelect = 0;
@@ -176,8 +168,8 @@ public class AutonomousSubsystem extends SubsystemBase{
           {AutonomousSteps.WAITLOOP,
              AutonomousSteps.DRIVE_REEF_LEFT,
              AutonomousSteps.ELEVATOR_LVL4,
-             AutonomousSteps.DRIVE_TO_REEF_RIGHT
-           // AutonomousSteps.SHOOTNOTE
+             AutonomousSteps.DRIVE_TO_REEF_RIGHT,
+             AutonomousSteps.HAND_SCORE
           },
       //REEF RIGHT
           {AutonomousSteps.WAITLOOP
@@ -304,8 +296,6 @@ public class AutonomousSubsystem extends SubsystemBase{
     int cmdIx = 0;
     for (int ix = 0; ix < m_cmdSteps[m_iPatternSelect].length; ix++) {
       if (m_bStepSWList[ix]) {
-        //autoCmdList[cmdIx] = getAutoCmd(m_autoStep[ix]);
-     //   System.out.println("Ordinal" + m_autoStep[ix].ordinal());
         autoCmdList[cmdIx] = m_stepCommands[m_autoStep[ix].ordinal()];
         cmdIx++;
       }
@@ -321,36 +311,27 @@ public class AutonomousSubsystem extends SubsystemBase{
     switch (autoStep.getStepStruc()) {
       case "W":
         double waitTime = autoStep.getWaitTIme();
-       // workCmd = getWaitCommand(waitTime == 99.9 ? m_ConsoleAuto.getROT_SW_1() : waitTime);
-       if (waitTime == 99.9) {
-        workCmd = getWaitLoop(() -> m_ConsoleAuto.getROT_SW_1());
-       } else {
-        workCmd = getWaitCommand(waitTime);
-       }
+        if (waitTime == 99.9) {
+          workCmd = getWaitLoop(() -> m_ConsoleAuto.getROT_SW_1());
+        } else {
+          workCmd = getWaitCommand(waitTime);
+        }
 
         break;
       case "D":
-        workCmd =  m_robotContainer.getDrivePlanCmd(autoStep.getplanName());
-       // workCmd = Commands.print("Drive command");
+        workCmd =  m_drive.getPathStep(autoStep.getplanName());
         break;
       case "L":
-          workCmd = m_robotContainer.getLiftCmd();
-      break;
+        workCmd = m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr());
+        break;
       case "D2R":
-       // workCmd =  m_robotContainer.getIntakePathCommand(autoStep.toString(), autoStep.getWaitTIme());
-       workCmd = Commands.print("Drive to reef");
-       break;
-     // case 'S':
-        //workCmd = getWaitCommand(2);
-       // switch (autoStep) {
-         // case SHOOTNOTE:
-           // workCmd = m_robotContainer.cmdShootNote().withTimeout(2);
-           // break;
-        
-        //  default:
-          //  break;
-       // }
-      //  break;
+        System.out.println("drive to branch");
+        workCmd = m_drive.driveToBranch(BranchSide.RIGHT);
+        break;
+      case "HS":
+        System.out.println("hand score");
+        workCmd = m_hand.cmdHandScore();
+        break;
       default:
         break;
     }
