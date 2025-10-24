@@ -49,6 +49,7 @@ public class AutonomousSubsystem extends SubsystemBase{
   public enum AutonomousSteps {
     WAIT1("W", 1.0, 0, 0, ""),
     WAIT2("W", 2.0, 0, 0, ""),
+    WAIT_DRIVE_TO_REEF("W", 2.5, 3, 0, ""),
     WAITLOOP("W", 99.9, 0, 0, ""),
     DRIVE_OUT("D", 0.0, 1, 0, "drive out - Auto"),
     DRIVE_REEF_LEFT("D", 0.0, 1, 0, "reef barge left - auto"),
@@ -168,6 +169,7 @@ public class AutonomousSubsystem extends SubsystemBase{
           {AutonomousSteps.WAITLOOP,
              AutonomousSteps.DRIVE_REEF_LEFT,
              AutonomousSteps.ELEVATOR_LVL4,
+             AutonomousSteps.WAIT_DRIVE_TO_REEF,
              AutonomousSteps.DRIVE_TO_REEF_RIGHT,
              AutonomousSteps.HAND_SCORE
           },
