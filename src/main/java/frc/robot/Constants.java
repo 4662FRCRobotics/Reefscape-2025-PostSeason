@@ -141,16 +141,16 @@ public final class Constants {
     public static final int motorHand = 30;
     public static final double kGearRatio = 5 * 5 * 3;
     public static final double kEncoderDegrees = 360 / kGearRatio;
-    public static final double kHandUp = -170 / kEncoderDegrees; // angle is negative degrees
-    public static final double kHandDown = 0 / kEncoderDegrees;
-    public static final double kHandScore = -125 / kEncoderDegrees;
+    public static final double kHandUp = -185 / kEncoderDegrees; // angle is negative degrees
+    public static final double kHandDown = -15 / kEncoderDegrees;
+    public static final double kHandScore = -140 / kEncoderDegrees;
     public static final double kHandStallCurrent = 20;
     public static final int kCurrentLimit = 20;
     public static final double kSecondaryCurrentLimit = 30;
     public static final double kPostionAdjust = 15  / kEncoderDegrees; // angle is in degrees 
-    public static final double kFwdSoftLimit = 5 / kEncoderDegrees;
-    public static final double kRevSoftLimit = -180 / kEncoderDegrees;
-    public static final double kHandDownish = -25;
+    public static final double kFwdSoftLimit = -10 / kEncoderDegrees;
+    public static final double kRevSoftLimit = -195 / kEncoderDegrees;
+    public static final double kHandDownish = 105; // for absolute encoder actual degrees
 
  }
 

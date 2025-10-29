@@ -93,6 +93,7 @@ public class HandSubsystem extends SubsystemBase {
   }
 
   private void adjustHandPosition(boolean isAdjustUp) {
+    setRelativeEncoder();
     if (isAdjustUp) {
       m_handTargetPosition = m_handTargetPosition + HandConstants.kPostionAdjust;
     } else {
@@ -116,6 +117,7 @@ public class HandSubsystem extends SubsystemBase {
   }
 
   private void setHandPosition(double targetPosition) {
+    setRelativeEncoder();
     m_handTargetPosition = targetPosition;
     m_closedLoopHand.setReference(m_handTargetPosition, ControlType.kMAXMotionPositionControl);
   }
@@ -155,7 +157,7 @@ public class HandSubsystem extends SubsystemBase {
   }
 
   public boolean isHandDown() {
-    return m_handTargetPosition >= (HandConstants.kHandDown) - 25;
+    return m_absEncoderHand.getPosition() <= HandConstants.kHandDownish;
   }
 
   public BooleanSupplier isHandDownSplr() {
