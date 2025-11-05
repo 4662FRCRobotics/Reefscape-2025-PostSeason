@@ -170,12 +170,10 @@ public class RobotContainer {
 
   private void runAutoConsoleTrue() {
     m_runAutoConsole = true;
-    System.out.println("true " + m_runAutoConsole);
   }
 
   private void runAutoConsoleFalse() {
     m_runAutoConsole = false;
-    System.out.println("false " + m_runAutoConsole);
   }
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -183,26 +181,7 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    //return m_robotDrive.getPathStep("drive out - Auto");
-   // return m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches);
     return m_AutonomousSubsystem.cmdAutoControl();
   }
 
-  /*
-  public Command getDrivePlanCmd(String planName) {
-    return m_robotDrive.getPathStep(planName);
-  }
-
-  public Command getLiftCmd() {
-    return m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_HandSubsystem.isHandDownSplr());
-  }
-
-  public Command getDriveToBranch() {
-    return m_robotDrive.driveToBranch(BranchSide.RIGHT);
-  }
-
-  public Command getHandScore() {
-    return m_HandSubsystem.cmdHandScore();
-  }
-  */
 }

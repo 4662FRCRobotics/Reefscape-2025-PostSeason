@@ -49,6 +49,7 @@ public class AutonomousSubsystem extends SubsystemBase{
   public enum AutonomousSteps {
     WAIT1("W", 1.0, 0, 0, ""),
     WAIT2("W", 2.0, 0, 0, ""),
+    WAIT_HAND_SCORE("W", 4.0, 4, 0, ""),
     WAIT_DRIVE_TO_REEF("W", 2.5, 3, 0, ""),
     WAITLOOP("W", 99.9, 0, 0, ""),
     DRIVE_OUT("D", 0.0, 1, 0, "drive out - Auto"),
@@ -171,6 +172,7 @@ public class AutonomousSubsystem extends SubsystemBase{
              AutonomousSteps.ELEVATOR_LVL4,
              AutonomousSteps.WAIT_DRIVE_TO_REEF,
              AutonomousSteps.DRIVE_TO_REEF_RIGHT,
+             AutonomousSteps.WAIT_HAND_SCORE,
              AutonomousSteps.HAND_SCORE
           },
       //REEF RIGHT
@@ -294,10 +296,13 @@ public class AutonomousSubsystem extends SubsystemBase{
   public Command cmdAutoControl() {
 
     Command autoCmdList[] = new Command[m_iCmdCount];
+    System.out.println("Cmd Count " + m_iCmdCount);
 
     int cmdIx = 0;
     for (int ix = 0; ix < m_cmdSteps[m_iPatternSelect].length; ix++) {
       if (m_bStepSWList[ix]) {
+        System.out.print("Selected command " + ix);
+        System.out.println("-" + m_strStepList[ix]);
         autoCmdList[cmdIx] = m_stepCommands[m_autoStep[ix].ordinal()];
         cmdIx++;
       }
@@ -327,11 +332,9 @@ public class AutonomousSubsystem extends SubsystemBase{
         workCmd = m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr());
         break;
       case "D2R":
-        System.out.println("drive to branch");
         workCmd = m_drive.driveToBranch(BranchSide.RIGHT);
         break;
       case "HS":
-        System.out.println("hand score");
         workCmd = m_hand.cmdHandScore();
         break;
       default:
