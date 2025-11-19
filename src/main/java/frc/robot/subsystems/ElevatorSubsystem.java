@@ -197,4 +197,9 @@ public Command cmdElevatorZero(BooleanSupplier isHandDown){
     .andThen(() -> elevatorZero() , this)
     ;
 }
+
+public BooleanSupplier isElevatorAtLevel() {
+  return () -> Math.abs(getPositionInches() - m_elevatorTargetPostion) <= 1;
+}
+
 }

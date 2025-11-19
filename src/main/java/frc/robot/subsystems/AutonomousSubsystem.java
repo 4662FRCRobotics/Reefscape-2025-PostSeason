@@ -292,23 +292,31 @@ public class AutonomousSubsystem extends SubsystemBase{
 
   /*
    * Command to process the selected command list
+   * 
+   * creates a sequential command group of all selected commands for the auto pattern
+   * returns the group 
+   * 
   */
   public Command cmdAutoControl() {
 
-    Command autoCmdList[] = new Command[m_iCmdCount];
+    //Command autoCmdList[] = new Command[m_iCmdCount];
+    SequentialCommandGroup autoCmd = new SequentialCommandGroup();
     System.out.println("Cmd Count " + m_iCmdCount);
 
-    int cmdIx = 0;
+    //int cmdIx = 0;
     for (int ix = 0; ix < m_cmdSteps[m_iPatternSelect].length; ix++) {
       if (m_bStepSWList[ix]) {
         System.out.print("Selected command " + ix);
         System.out.println("-" + m_strStepList[ix]);
-        autoCmdList[cmdIx] = m_stepCommands[m_autoStep[ix].ordinal()];
-        cmdIx++;
+        autoCmd.addCommands(Commands.print("Starting: " + m_strStepList[ix]));
+        autoCmd.addCommands(m_stepCommands[m_autoStep[ix].ordinal()]);
+        //autoCmdList[cmdIx] = m_stepCommands[m_autoStep[ix].ordinal()];
+        //cmdIx++;
+        autoCmd.addCommands(Commands.print("Just completed: " + m_strStepList[ix]));
       }
     }
 
-    SequentialCommandGroup autoCmd = new SequentialCommandGroup(autoCmdList);
+    //SequentialCommandGroup autoCmd = new SequentialCommandGroup(autoCmdList);
     return autoCmd;
    
   }
@@ -318,6 +326,7 @@ public class AutonomousSubsystem extends SubsystemBase{
     switch (autoStep.getStepStruc()) {
       case "W":
         double waitTime = autoStep.getWaitTIme();
+        System.out.println("Wait time " + autoStep.getWaitTIme());
         if (waitTime == 99.9) {
           workCmd = getWaitLoop(() -> m_ConsoleAuto.getROT_SW_1());
         } else {
