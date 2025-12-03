@@ -116,7 +116,6 @@ public class AutonomousSubsystem extends SubsystemBase{
   private int m_iPatternSelect;
 
   private AutonomousSteps[][] m_cmdSteps;
-  private Command[] m_stepCommands;
 
   public AutonomousSubsystem(ConsoleAuto consoleAuto,
         RobotContainer robotContainer,
@@ -138,15 +137,6 @@ public class AutonomousSubsystem extends SubsystemBase{
       fmtDisplay(iat);
     }
   
-    m_stepCommands = new Command[ AutonomousSteps.values().length];
-    int cmdIx = 0;
-    for (AutonomousSteps stepCommands: AutonomousSteps.values()) {
-    //  System.out.println(stepCommands);
-      m_stepCommands [cmdIx] = getAutoCmd(stepCommands);
-      cmdIx++;
-    }
-
-
 /*
  *  CRITICAL PIECE
  * This two dimensional array defines the steps for each selectable Auto pattern
@@ -299,19 +289,15 @@ public class AutonomousSubsystem extends SubsystemBase{
   */
   public Command cmdAutoControl() {
 
-    //Command autoCmdList[] = new Command[m_iCmdCount];
     SequentialCommandGroup autoCmd = new SequentialCommandGroup();
     System.out.println("Cmd Count " + m_iCmdCount);
 
-    //int cmdIx = 0;
     for (int ix = 0; ix < m_cmdSteps[m_iPatternSelect].length; ix++) {
       if (m_bStepSWList[ix]) {
         System.out.print("Selected command " + ix);
         System.out.println("-" + m_strStepList[ix]);
         autoCmd.addCommands(Commands.print("Starting: " + m_strStepList[ix]));
-        autoCmd.addCommands(m_stepCommands[m_autoStep[ix].ordinal()]);
-        //autoCmdList[cmdIx] = m_stepCommands[m_autoStep[ix].ordinal()];
-        //cmdIx++;
+        autoCmd.addCommands(getAutoCmd(m_autoStep[ix]));
         autoCmd.addCommands(Commands.print("Just completed: " + m_strStepList[ix]));
       }
     }
@@ -338,7 +324,7 @@ public class AutonomousSubsystem extends SubsystemBase{
         workCmd =  m_drive.getPathStep(autoStep.getplanName());
         break;
       case "L":
-        //workCmd = m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr());
+        // build sequence to raise elevator, move hand up, and wait until elevator is in position
         workCmd = Commands.sequence(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr()),
                                     Commands.waitUntil(() -> m_elevator.isElevatorAtCrossbar()),
                                     m_hand.cmdSetHandUp(),
