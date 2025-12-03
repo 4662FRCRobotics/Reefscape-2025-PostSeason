@@ -294,8 +294,8 @@ public class AutonomousSubsystem extends SubsystemBase{
 
     for (int ix = 0; ix < m_cmdSteps[m_iPatternSelect].length; ix++) {
       if (m_bStepSWList[ix]) {
-        System.out.print("Selected command " + ix);
-        System.out.println("-" + m_strStepList[ix]);
+        //System.out.print("Selected command " + ix);
+        //System.out.println("-" + m_strStepList[ix]);
         autoCmd.addCommands(Commands.print("Starting: " + m_strStepList[ix]));
         autoCmd.addCommands(getAutoCmd(m_autoStep[ix]));
         autoCmd.addCommands(Commands.print("Just completed: " + m_strStepList[ix]));
@@ -314,9 +314,9 @@ public class AutonomousSubsystem extends SubsystemBase{
         double waitTime = autoStep.getWaitTIme();
         System.out.println("Wait time " + autoStep.getWaitTIme());
         if (waitTime == 99.9) {
-          workCmd = getWaitLoop(() -> m_ConsoleAuto.getROT_SW_1());
+          workCmd = Commands.waitSeconds(m_ConsoleAuto.getROT_SW_1());
         } else {
-          workCmd = getWaitCommand(waitTime);
+          workCmd = Commands.waitSeconds(waitTime);
         }
 
         break;
@@ -328,7 +328,6 @@ public class AutonomousSubsystem extends SubsystemBase{
         workCmd = Commands.sequence(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr()),
                                     Commands.waitUntil(() -> m_elevator.isElevatorAtCrossbar()),
                                     m_hand.cmdSetHandUp(),
-                                    Commands.print("Starting Elevator Wait ") , 
                                     Commands.waitUntil(m_elevator.isElevatorAtLevel())
                                     );
         break;
@@ -342,14 +341,6 @@ public class AutonomousSubsystem extends SubsystemBase{
         break;
     }
     return workCmd;
-  }
-
-  private Command getWaitCommand(double seconds) {
-    return Commands.waitSeconds(seconds);
-  }
-
-  private Command getWaitLoop(DoubleSupplier loopTime) {
-    return Commands.waitSeconds(loopTime.getAsDouble());
   }
   
 }
