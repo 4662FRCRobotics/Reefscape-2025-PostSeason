@@ -127,7 +127,7 @@ public final class Constants {
     public static final double kTroughInches = 17.88;
     public static final double kLevel2Inches = 31.72;
     public static final double kLevel3Inches = 47.59;
-    public static final double kLevel4Inches = 71.87;
+    public static final double kLevel4Inches = 71.0;
     public static final double kWinchCircumferenceInches = (1.25 * Math.PI);
     public static final double kHandStartUpInches = 41;
     public static final double kGearRatio = 5 * 3; 

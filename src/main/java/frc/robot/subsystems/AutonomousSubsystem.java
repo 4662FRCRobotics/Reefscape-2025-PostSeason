@@ -170,9 +170,9 @@ public class AutonomousSubsystem extends SubsystemBase{
           {AutonomousSteps.WAITLOOP,
              AutonomousSteps.DRIVE_REEF_LEFT,
              AutonomousSteps.ELEVATOR_LVL4,
-             AutonomousSteps.WAIT_DRIVE_TO_REEF,
+             //AutonomousSteps.WAIT_DRIVE_TO_REEF,
              AutonomousSteps.DRIVE_TO_REEF_RIGHT,
-             AutonomousSteps.WAIT_HAND_SCORE,
+             //AutonomousSteps.WAIT_HAND_SCORE,
              AutonomousSteps.HAND_SCORE
           },
       //REEF RIGHT
@@ -338,7 +338,13 @@ public class AutonomousSubsystem extends SubsystemBase{
         workCmd =  m_drive.getPathStep(autoStep.getplanName());
         break;
       case "L":
-        workCmd = m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr());
+        //workCmd = m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr());
+        workCmd = Commands.sequence(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_hand.isHandDownSplr()),
+                                    Commands.waitUntil(() -> m_elevator.isElevatorAtCrossbar()),
+                                    m_hand.cmdSetHandUp(),
+                                    Commands.print("Starting Elevator Wait ") , 
+                                    Commands.waitUntil(m_elevator.isElevatorAtLevel())
+                                    );
         break;
       case "D2R":
         workCmd = m_drive.driveToBranch(BranchSide.RIGHT);

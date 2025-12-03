@@ -97,13 +97,14 @@ public class ElevatorSubsystem extends SubsystemBase {
     if (outputCurrentRight > m_outputCurrentRight) {
       m_outputCurrentRight = outputCurrentRight;
     }
-    SmartDashboard.putNumber("Left Current",m_outputCurrentLeft);
-    SmartDashboard.putNumber("Right Current",m_outputCurrentRight);
-    SmartDashboard.putNumber("Elevator Position",m_elevatorTargetPostion);
+    SmartDashboard.putNumber("Left Current", m_outputCurrentLeft);
+    SmartDashboard.putNumber("Right Current" ,m_outputCurrentRight);
+    SmartDashboard.putNumber("Elevator Position", m_elevatorTargetPostion);
     SmartDashboard.putNumber("Actual Pos", getPositionInches());
     SmartDashboard.putNumber("Elevator P" , m_elevatorP);
     SmartDashboard.putNumber( "Elevator I" , m_elevatorI);
     SmartDashboard.putNumber( "Elevator D" , m_elevatorD);
+    SmartDashboard.putBoolean("Elevator At Target", isElevatorThere());
   }
 
   private void updateElevatorConfig() {
@@ -199,7 +200,11 @@ public Command cmdElevatorZero(BooleanSupplier isHandDown){
 }
 
 public BooleanSupplier isElevatorAtLevel() {
-  return () -> Math.abs(getPositionInches() - m_elevatorTargetPostion) <= 1;
+  return () -> isElevatorThere();
+}
+
+private boolean isElevatorThere() {
+  return Math.abs(getPositionInches() - m_elevatorTargetPostion) <= 1;
 }
 
 }

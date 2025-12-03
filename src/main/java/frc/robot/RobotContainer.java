@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.DriverStation;
 //import edu.wpi.first.math.controller.PIDController;
 //import edu.wpi.first.math.controller.ProfiledPIDController;
 //import edu.wpi.first.math.geometry.Pose2d;
@@ -157,6 +158,7 @@ public class RobotContainer {
     //m_operatorController.rightYDownTrigger()
     //    .onTrue(m_HandSubsystem.cmdHandZero());
     new Trigger(() -> m_elevator.isElevatorAtCrossbar())
+        .and(() -> !DriverStation.isAutonomous())
         .onTrue(m_HandSubsystem.cmdSetHandUp());
     m_operatorController.rightBumper()
         .whileTrue(Commands.run(()->m_HandSubsystem.stopHandMotor()));
