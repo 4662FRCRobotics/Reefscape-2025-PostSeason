@@ -4,6 +4,9 @@
 
 package frc.robot.subsystems;
 
+import java.util.function.BooleanSupplier;
+
+import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
@@ -20,8 +23,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants.ElevatorConstants;
-//import frc.robot.Constants.ElevatorConstants;
 import frc.robot.Constants.HandConstants;
 
 public class HandSubsystem extends SubsystemBase {
@@ -29,6 +30,7 @@ public class HandSubsystem extends SubsystemBase {
   private SparkMax m_motorHand;
   private SparkMaxConfig m_motorConfigHand;
   private RelativeEncoder m_encoderHand;
+  private AbsoluteEncoder m_absEncoderHand;
   private SparkClosedLoopController m_closedLoopHand;
   private SoftLimitConfig m_SoftLimitHand;
   private double m_handTargetPosition = HandConstants.kHandDown;
@@ -50,20 +52,31 @@ public class HandSubsystem extends SubsystemBase {
         .maxVelocity(5000)
         .allowedClosedLoopError(1);
       m_closedLoopHand = m_motorHand.getClosedLoopController();
+      m_motorConfigHand.absoluteEncoder
+        .inverted(true)
+        .positionConversionFactor(360);
        m_SoftLimitHand = new SoftLimitConfig();
       m_SoftLimitHand.forwardSoftLimit(HandConstants.kFwdSoftLimit)
         .forwardSoftLimitEnabled(true)
         .reverseSoftLimit(HandConstants.kRevSoftLimit)
         .reverseSoftLimitEnabled(true);
+      m_motorConfigHand.apply(m_SoftLimitHand);
+  
       m_motorHand.configure(m_motorConfigHand, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
       m_encoderHand = m_motorHand.getEncoder();
+      m_absEncoderHand = m_motorHand.getAbsoluteEncoder();
+
+      setRelativeEncoder();
+  
   }
 
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
     SmartDashboard.putNumber( "HandPostion", m_encoderHand.getPosition());
+    SmartDashboard.putNumber("Hand Target", m_handTargetPosition);
+    SmartDashboard.putNumber("Hand Abs Enc", m_absEncoderHand.getPosition());
     SmartDashboard.putNumber("Hand Current",m_motorHand.getOutputCurrent());
   }
 
@@ -80,11 +93,15 @@ public class HandSubsystem extends SubsystemBase {
   }
 
   private void adjustHandPosition(boolean isAdjustUp) {
+    setRelativeEncoder();
     if (isAdjustUp) {
       m_handTargetPosition = m_handTargetPosition + HandConstants.kPostionAdjust;
     } else {
-        m_handTargetPosition = m_handTargetPosition - HandConstants.kPostionAdjust;
+      m_handTargetPosition = m_handTargetPosition - HandConstants.kPostionAdjust;
     }
+    //if (m_handTargetPosition > HandConstants.kFwdSoftLimit) {
+    //  m_handTargetPosition = HandConstants.kFwdSoftLimit}
+    // etc
     m_closedLoopHand.setReference(m_handTargetPosition, ControlType.kMAXMotionPositionControl);
   }
 
@@ -100,6 +117,7 @@ public class HandSubsystem extends SubsystemBase {
   }
 
   private void setHandPosition(double targetPosition) {
+    setRelativeEncoder();
     m_handTargetPosition = targetPosition;
     m_closedLoopHand.setReference(m_handTargetPosition, ControlType.kMAXMotionPositionControl);
   }
@@ -120,6 +138,10 @@ public class HandSubsystem extends SubsystemBase {
     return Commands.runOnce(() -> setHandPosition() , this);
   }
 
+  public Command cmdHandScore() {
+    return Commands.runOnce(() -> setHandPosition(HandConstants.kHandScore), this);
+  }
+
   private void handZero(){
   stopHandMotor();
   m_encoderHand.setPosition(0);
@@ -135,6 +157,14 @@ public class HandSubsystem extends SubsystemBase {
   }
 
   public boolean isHandDown() {
-    return m_handTargetPosition >= (HandConstants.kHandDown) - 25;
+    return m_absEncoderHand.getPosition() <= HandConstants.kHandDownish;
+  }
+
+  public BooleanSupplier isHandDownSplr() {
+    return () -> isHandDown();
+  }
+
+  private void setRelativeEncoder() {
+    m_encoderHand.setPosition(-m_absEncoderHand.getPosition()/HandConstants.kEncoderDegrees);
   }
 }

@@ -4,6 +4,8 @@
 
 package frc.robot.subsystems;
 
+import java.util.function.BooleanSupplier;
+
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
@@ -31,6 +33,8 @@ public class ElevatorSubsystem extends SubsystemBase {
   private SparkClosedLoopController m_closedLoopElevatorLeft;
   private SparkMaxConfig m_motorConfigLeft;
   private double m_elevatorTargetPostion;
+  private double m_outputCurrentLeft;
+  private double m_outputCurrentRight;
   private RelativeEncoder m_encoderElevatorLeft;
   private double m_elevatorP;
   private double m_elevatorI;
@@ -44,7 +48,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     m_elevatorI = 0;
     m_elevatorD = 0;
     m_motorElevatorLeft = new SparkMax(ElevatorConstants.motorElevatorLeft, MotorType.kBrushless);
-      m_motorConfigLeft = new SparkMaxConfig();
+    m_motorConfigLeft = new SparkMaxConfig();
       m_motorConfigLeft.idleMode(IdleMode.kBrake)
         .smartCurrentLimit(ElevatorConstants.kCurrentLimit)
         .secondaryCurrentLimit(ElevatorConstants.kSecondaryCurrentLimit);
@@ -58,12 +62,12 @@ public class ElevatorSubsystem extends SubsystemBase {
         .maxAcceleration(2500)
         .maxVelocity(5000)
         .allowedClosedLoopError(1);
-      m_motorSoftLimitLeft = new SoftLimitConfig();
-      m_motorSoftLimitLeft.forwardSoftLimit(ElevatorConstants.kFwdSoftLimit)
+    m_motorSoftLimitLeft = new SoftLimitConfig();
+    m_motorSoftLimitLeft.forwardSoftLimit(ElevatorConstants.kFwdSoftLimit)
         .forwardSoftLimitEnabled(true)
         .reverseSoftLimit(ElevatorConstants.kRevSoftLimit)
         .reverseSoftLimitEnabled(true);
-        
+    m_motorConfigLeft.apply(m_motorSoftLimitLeft);
     m_closedLoopElevatorLeft = m_motorElevatorLeft.getClosedLoopController();
     m_motorElevatorLeft.configure(m_motorConfigLeft, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     m_motorElevatorRight = new SparkMax(ElevatorConstants.motorElevatorRight, MotorType.kBrushless);
@@ -78,18 +82,29 @@ public class ElevatorSubsystem extends SubsystemBase {
     m_encoderElevatorLeft = m_motorElevatorLeft.getEncoder();
 
     m_elevatorTargetPostion = ElevatorConstants.kHandStartUpInches;
+    m_outputCurrentLeft = 0.0;
+    m_outputCurrentRight = 0.0;
   }
 
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-    SmartDashboard.putNumber("Left Current",m_motorElevatorLeft.getOutputCurrent());
-    SmartDashboard.putNumber("Right Current",m_motorElevatorRight.getOutputCurrent());
-    SmartDashboard.putNumber("Elevator Position",m_elevatorTargetPostion);
+    double outputCurrentLeft = m_motorElevatorLeft.getOutputCurrent();
+    double outputCurrentRight = m_motorElevatorRight.getOutputCurrent();
+    if (outputCurrentLeft > m_outputCurrentLeft) {
+      m_outputCurrentLeft = outputCurrentLeft;
+    }
+    if (outputCurrentRight > m_outputCurrentRight) {
+      m_outputCurrentRight = outputCurrentRight;
+    }
+    SmartDashboard.putNumber("Left Current", m_outputCurrentLeft);
+    SmartDashboard.putNumber("Right Current" ,m_outputCurrentRight);
+    SmartDashboard.putNumber("Elevator Position", m_elevatorTargetPostion);
     SmartDashboard.putNumber("Actual Pos", getPositionInches());
     SmartDashboard.putNumber("Elevator P" , m_elevatorP);
     SmartDashboard.putNumber( "Elevator I" , m_elevatorI);
     SmartDashboard.putNumber( "Elevator D" , m_elevatorD);
+    SmartDashboard.putBoolean("Elevator At Target", isElevatorThere());
   }
 
   private void updateElevatorConfig() {
@@ -108,28 +123,34 @@ public class ElevatorSubsystem extends SubsystemBase {
     return Commands.runOnce(() -> updateElevatorConfig() , this).ignoringDisable(true);
   }
 
-  public void setElevatorPosition(double targetPosition) {
+  public void setElevatorPosition(double targetPosition, BooleanSupplier isHandDown) {
+
+    if (targetPosition < ElevatorConstants.kHandStartUpInches) {
+      if (isHandDown.getAsBoolean()) {
+        targetPosition = ElevatorConstants.kHandStartUpInches;
+      }
+    }
     m_elevatorTargetPostion = targetPosition;
     double targetEncoderPosition = ((m_elevatorTargetPostion - ElevatorConstants.kHandStartUpInches) / ElevatorConstants.kWinchCircumferenceInches) * ElevatorConstants.kGearRatio;
     m_closedLoopElevatorLeft.setReference(targetEncoderPosition, ControlType.kMAXMotionPositionControl);
   }
 
-  private void adjustElevatorPosition(boolean isAdjustUp) {
+  private void adjustElevatorPosition(boolean isAdjustUp, BooleanSupplier isHandDown) {
     if (isAdjustUp) {
       m_elevatorTargetPostion = m_elevatorTargetPostion + ElevatorConstants.kPostionAdjust;
     } else {
       m_elevatorTargetPostion = m_elevatorTargetPostion - ElevatorConstants.kPostionAdjust;
     }
-    setElevatorPosition(m_elevatorTargetPostion);
+    setElevatorPosition(m_elevatorTargetPostion, isHandDown);
   //  m_closedLoopElevatorLeft.setReference(m_elevatorTargetPostion, ControlType.kMAXMotionPositionControl);
   }
 
-  public Command cmdAdjustElevatorPosition(boolean isAdjustUp) {
-    return Commands.runOnce(() -> adjustElevatorPosition(isAdjustUp) , this);
+  public Command cmdAdjustElevatorPosition(boolean isAdjustUp, BooleanSupplier isHandDown) {
+    return Commands.runOnce(() -> adjustElevatorPosition(isAdjustUp, isHandDown) , this);
   }
 
-  public Command cmdSetElevatorPosition(double targetPosition) {
-    return Commands.runOnce(() -> setElevatorPosition(targetPosition) , this);
+  public Command cmdSetElevatorPosition(double targetPosition, BooleanSupplier isHandDown) {
+    return Commands.runOnce(() -> setElevatorPosition(targetPosition, isHandDown) , this);
   }
 
   public void runMotor(double speed){
@@ -169,12 +190,21 @@ private void elevatorZero(){
   stopElevatorMotor();
   m_encoderElevatorLeft.setPosition(0);
 }
-public Command cmdElevatorZero(){
+public Command cmdElevatorZero(BooleanSupplier isHandDown){
   //return Commands.runOnce(() -> stopElevatorMotor(), this)
    // .andThen(Commands.run(() -> runMotor(ElevatorConstants.kElevatorDown) , this))
-   return Commands.run(() -> setElevatorPosition(ElevatorConstants.kFloorLevel))
+   return Commands.run(() -> setElevatorPosition(ElevatorConstants.kFloorLevel, isHandDown))
     .until(() -> m_motorElevatorLeft.getOutputCurrent() >= ElevatorConstants.kBottomCurrent)
     .andThen(() -> elevatorZero() , this)
     ;
 }
+
+public BooleanSupplier isElevatorAtLevel() {
+  return () -> isElevatorThere();
+}
+
+private boolean isElevatorThere() {
+  return Math.abs(getPositionInches() - m_elevatorTargetPostion) <= 1;
+}
+
 }

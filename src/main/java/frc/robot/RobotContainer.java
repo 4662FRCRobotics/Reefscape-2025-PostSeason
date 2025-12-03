@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.DriverStation;
 //import edu.wpi.first.math.controller.PIDController;
 //import edu.wpi.first.math.controller.ProfiledPIDController;
 //import edu.wpi.first.math.geometry.Pose2d;
@@ -25,6 +26,7 @@ import frc.robot.libraries.ConsoleAuto;
 import frc.robot.subsystems.AutonomousSubsystem;
 import frc.robot.subsystems.CameraServoSubsystem;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.DriveSubsystem.BranchSide;
 import frc.robot.subsystems.ElevatorSubsystem;
 import frc.robot.subsystems.HandSubsystem;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -60,7 +62,7 @@ public class RobotContainer {
   private final CommandGenericHID m_CommandGenericHID = 
     new CommandGenericHID(OIConstants.kTeleopConsolePort);
 
-  private final AutonomousSubsystem m_AutonomousSubsystem = new AutonomousSubsystem(m_ConsoleAuto, this);
+  private final AutonomousSubsystem m_AutonomousSubsystem = new AutonomousSubsystem(m_ConsoleAuto, this, m_robotDrive, m_elevator, m_HandSubsystem);
 
   static boolean m_runAutoConsole;
   /**
@@ -121,23 +123,26 @@ public class RobotContainer {
     new Trigger(RobotModeTriggers.disabled())
     .onFalse(Commands.runOnce(this::runAutoConsoleFalse))
     ;
-  
+  m_driverController.a().onTrue(m_robotDrive.driveToBranch(BranchSide.LEFT));
+
+  m_driverController.b().onTrue(m_robotDrive.driveToBranch(BranchSide.RIGHT));
+
     m_operatorController.a() 
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kTroughInches));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kTroughInches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.x()
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel2Inches));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel2Inches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.b()
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel3Inches));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel3Inches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.y()
-        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches));
+        .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.leftBumper()
         .whileTrue(Commands.run(()->m_elevator.runMotor(0)));
    // m_operatorController.rightBumper()
-  //      .onTrue(m_elevator.cmdElevatorZero());
+  //      .onTrue(m_elevator.cmdElevatorZero(m_HandSubsystem.isHandDownSplr()));
     m_operatorController.povUp()
-        .onTrue(m_elevator.cmdAdjustElevatorPosition(true));
+        .onTrue(m_elevator.cmdAdjustElevatorPosition(true, m_HandSubsystem.isHandDownSplr()));
     m_operatorController.povDown()
-        .onTrue(m_elevator.cmdAdjustElevatorPosition(false));
+        .onTrue(m_elevator.cmdAdjustElevatorPosition(false, m_HandSubsystem.isHandDownSplr()));
     new Trigger(() -> m_elevator.isElevatorStalled())
         .onTrue(m_elevator.cmdStopElevator());
     m_operatorController.leftTrigger()
@@ -153,6 +158,7 @@ public class RobotContainer {
     //m_operatorController.rightYDownTrigger()
     //    .onTrue(m_HandSubsystem.cmdHandZero());
     new Trigger(() -> m_elevator.isElevatorAtCrossbar())
+        .and(() -> !DriverStation.isAutonomous())
         .onTrue(m_HandSubsystem.cmdSetHandUp());
     m_operatorController.rightBumper()
         .whileTrue(Commands.run(()->m_HandSubsystem.stopHandMotor()));
@@ -166,12 +172,10 @@ public class RobotContainer {
 
   private void runAutoConsoleTrue() {
     m_runAutoConsole = true;
-    System.out.println("true " + m_runAutoConsole);
   }
 
   private void runAutoConsoleFalse() {
     m_runAutoConsole = false;
-    System.out.println("false " + m_runAutoConsole);
   }
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -179,16 +183,7 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    //return m_robotDrive.getPathStep("drive out - Auto");
-   // return m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches);
     return m_AutonomousSubsystem.cmdAutoControl();
   }
 
-  public Command getDrivePlanCmd(String planName) {
-    return m_robotDrive.getPathStep(planName);
-  }
-
-  public Command getLiftCmd(){
-    return  m_elevator.cmdSetElevatorPosition(ElevatorConstants.kLevel4Inches);
-  }
 }

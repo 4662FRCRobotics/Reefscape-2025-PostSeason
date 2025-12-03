@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import com.pathplanner.lib.path.PathConstraints;
+
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -27,7 +29,9 @@ public final class Constants {
     // the robot, rather the allowed maximum speeds
     public static final double kMaxSpeedMetersPerSecond = 4.8;
     public static final double kMaxAngularSpeed = 2 * Math.PI; // radians per second
-
+    public static final PathConstraints kStartingPathConstraints = new PathConstraints(3.0, 2.0, 1/2 * Math.PI, 1 * Math.PI);
+    public static final PathConstraints kTeleopPathConstraints = new PathConstraints(1.0, 1.0, 1/2 * Math.PI, 1 * Math.PI);
+    public static final PathConstraints kAutoPathConstraints = new PathConstraints(2.0, 2.0, 1/2 * Math.PI, 1 * Math.PI);
     // Chassis configuration
     public static final double kTrackWidth = Units.inchesToMeters(26.5);
     // Distance between centers of right and left wheels on robot
@@ -58,7 +62,7 @@ public final class Constants {
 
     public static final boolean kGyroReversed = false;
 
-    public static final String kCameraOne = "HD_Webcam_C615";
+    public static final String kCameraOne = "Arducam_OV9281_USB_Camera";
     public static final String kCameraTwo = "HD_USB_Camera";
   }
 
@@ -123,7 +127,7 @@ public final class Constants {
     public static final double kTroughInches = 17.88;
     public static final double kLevel2Inches = 31.72;
     public static final double kLevel3Inches = 47.59;
-    public static final double kLevel4Inches = 71.87;
+    public static final double kLevel4Inches = 71.0;
     public static final double kWinchCircumferenceInches = (1.25 * Math.PI);
     public static final double kHandStartUpInches = 41;
     public static final double kGearRatio = 5 * 3; 
@@ -137,15 +141,16 @@ public final class Constants {
     public static final int motorHand = 30;
     public static final double kGearRatio = 5 * 5 * 3;
     public static final double kEncoderDegrees = 360 / kGearRatio;
-    public static final double kHandUp = -170 / kEncoderDegrees; // angle is negative degrees
-    public static final double kHandDown = 0 / kEncoderDegrees;
+    public static final double kHandUp = -185 / kEncoderDegrees; // angle is negative degrees
+    public static final double kHandDown = -15 / kEncoderDegrees;
+    public static final double kHandScore = -140 / kEncoderDegrees;
     public static final double kHandStallCurrent = 20;
     public static final int kCurrentLimit = 20;
     public static final double kSecondaryCurrentLimit = 30;
     public static final double kPostionAdjust = 15  / kEncoderDegrees; // angle is in degrees 
-    public static final double kFwdSoftLimit = -180 / kEncoderDegrees;
-    public static final double kRevSoftLimit = 0 / kEncoderDegrees;
-    public static final double kHandDownish = -25;
+    public static final double kFwdSoftLimit = -10 / kEncoderDegrees;
+    public static final double kRevSoftLimit = -195 / kEncoderDegrees;
+    public static final double kHandDownish = 105; // for absolute encoder actual degrees
 
  }
 

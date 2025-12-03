@@ -7,17 +7,35 @@ package frc.robot.subsystems;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 
-import org.photonvision.PhotonCamera;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.PhotonTrackedTarget;
+
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 //import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -25,12 +43,17 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.Constants.DriveConstants;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.IdealStartingState;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.Waypoint;
 
 
 public class DriveSubsystem extends SubsystemBase {
@@ -55,6 +78,12 @@ public class DriveSubsystem extends SubsystemBase {
       DriveConstants.kRearRightTurningCanId,
       DriveConstants.kBackRightChassisAngularOffset);
 
+  private static final AprilTagFieldLayout m_fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+  private static final Transform3d kRobotToCam = 
+    new Transform3d(new Translation3d(0.185, 0.22, 0.3), new Rotation3d(0, 0, 0));
+  private PhotonPoseEstimator photonEstimator = 
+    new PhotonPoseEstimator(m_fieldLayout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, kRobotToCam);
+  private Optional<EstimatedRobotPose> m_visionEst = Optional.empty();
   // The gyro sensor
   private final ADIS16470_IMU m_gyro = new ADIS16470_IMU(ADIS16470_IMU.IMUAxis.kY, ADIS16470_IMU.IMUAxis.kX, ADIS16470_IMU.IMUAxis.kZ);
 
@@ -77,8 +106,31 @@ public class DriveSubsystem extends SubsystemBase {
             new Pose2d());
     private final Field2d m_field = new Field2d();
 
- // PhotonCamera m_driverCameraOne;
-  PhotonCamera m_driverCameraTwo;
+    PhotonCamera m_aprilCameraOne;
+    PhotonCamera m_driverCameraTwo;
+    boolean m_hasTargets = false;
+    PhotonTrackedTarget m_target = new PhotonTrackedTarget();
+
+private BranchSide m_side = BranchSide.MIDDLE;
+
+  public enum BranchSide{
+    LEFT(new Translation2d(-0.153209, 0.5406845 + 0.02)),
+    RIGHT(new Translation2d(0.2032, 0.5408565 + 0.02)),
+    MIDDLE(new Translation2d(0.064853, 0.5408565 + 0.02));
+    
+    public Translation2d tagOffset;
+    private BranchSide(Translation2d offsets) {
+      tagOffset = offsets;
+    }
+
+    public BranchSide mirror() {
+      switch (this) {
+        case LEFT: return RIGHT;
+        case MIDDLE: return MIDDLE;
+        default: return LEFT;
+      }
+    }
+  }
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
@@ -119,8 +171,8 @@ public class DriveSubsystem extends SubsystemBase {
 
     SmartDashboard.putData("Field", m_field);
 
-   // m_driverCameraOne = new PhotonCamera(DriveConstants.kCameraOne);
-   // m_driverCameraOne.setDriverMode(true);
+    m_aprilCameraOne = new PhotonCamera(DriveConstants.kCameraOne);
+    m_aprilCameraOne.setDriverMode(false);
     m_driverCameraTwo = new PhotonCamera(DriveConstants.kCameraTwo);
     m_driverCameraTwo.setDriverMode(true);
 
@@ -137,12 +189,58 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearLeft.getPosition(),
             m_rearRight.getPosition()
         });*/
+    double yaw = 0;
+    double pitch = 0;
+    double area = 0;
+    double skew = 0;
+    int targetID = 0;
+    Optional<Pose3d> target3d;
+    //Optional<EstimatedRobotPose> visionEst = Optional.empty();
+    var april1Result = m_aprilCameraOne.getLatestResult();
+    m_hasTargets = april1Result.hasTargets();
+    if (m_hasTargets) {
+      m_target = april1Result.getBestTarget();
+      m_visionEst = photonEstimator.update(april1Result);
+      yaw = m_target.getYaw();
+      pitch = m_target.getPitch();
+      area = m_target.getArea();
+      skew = m_target.getSkew();
+      targetID = m_target.getFiducialId();
+      target3d = m_fieldLayout.getTagPose(targetID);
+    /*  if (visionEst.isPresent()) {
+        target3d = Optional.of(visionEst.get().estimatedPose);
+      }*/
+    } else { 
+      target3d = Optional.empty();
+      m_visionEst = Optional.empty();
+    }
+    
+    SmartDashboard.putString("Branch side", m_side.name());
+    SmartDashboard.putNumber("Yaw" , yaw);
+    SmartDashboard.putNumber("Pitch" , pitch);
+    SmartDashboard.putNumber("Area" , area);
+    SmartDashboard.putNumber("Skew" , skew);
+    SmartDashboard.putNumber("Target ID" , targetID);
+    SmartDashboard.putNumber("Gyro" , getHeading().getDegrees());
+    SmartDashboard.putBoolean("Has Target", m_hasTargets);
+
     m_poseEstimator.update(
       getHeading(),
       getModulePositions()
       );
 
+    //if (!visionEst.isEmpty()) {
+    //  m_poseEstimator.resetPose(visionEst.get().estimatedPose.toPose2d());
+    //} 
     m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
+  }
+
+  void setSide(BranchSide side){
+    m_side = side;
+  }
+
+  public Command cmdSetBranchSide(BranchSide side){
+    return Commands.runOnce(()-> setSide(side),this);
   }
 
   /**
@@ -262,7 +360,7 @@ public class DriveSubsystem extends SubsystemBase {
    * @return the robot's heading in degrees, from -180 to 180
    */
   public Rotation2d getHeading() {
-    return Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ));
+    return Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kY));
   }
 
   /**
@@ -300,8 +398,75 @@ public class DriveSubsystem extends SubsystemBase {
     };
   }
 
+  //-------PATH PLANNER---------
+
+  //auto prebuild path
   public Command getPathStep(String pathName) {
 
       return new PathPlannerAuto(pathName);
   }
+
+  //returns command to drive path to a specified branch
+  public Command driveToBranch (BranchSide side) {
+    return Commands.defer(() -> {
+    if (m_hasTargets){
+       var branch = getBranchFromTag(m_fieldLayout.getTagPose(m_target.getFiducialId()).get().toPose2d(), side);
+       //return Commands.print("Has target " + m_target.getFiducialId() + side.name());
+       return getPathFromWaypoint(getWaypointFromBranch(branch));
+    } else {return Commands.print("No target");}
+    }, Set.of(this));
+  }
+
+  private LinearVelocity getVelocityMagnitude(ChassisSpeeds cs){
+    return MetersPerSecond.of(new Translation2d(cs.vxMetersPerSecond, cs.vyMetersPerSecond).getNorm());
+  }
+
+  private Command getPathFromWaypoint(Pose2d waypoint) {
+    m_poseEstimator.resetPose(m_visionEst.get().estimatedPose.toPose2d());
+    List<Waypoint> waypoints = PathPlannerPath.waypointsFromPoses(
+      new Pose2d(getPose().getTranslation(), getPose().getRotation()), waypoint);
+    
+    PathPlannerPath path = new PathPlannerPath(
+      waypoints,
+      DriveConstants.kTeleopPathConstraints,
+      new IdealStartingState(getVelocityMagnitude(getRobotRelativeSpeeds()), getHeading()),
+      new GoalEndState(0.0, waypoint.getRotation()));
+
+    path.preventFlipping = true;
+
+    return (AutoBuilder.followPath(path))
+    //.beforeStarting(() -> {m_poseEstimator.resetPose(m_visionEst.get().estimatedPose.toPose2d());} , this)
+    .finallyDo((interupt) -> {
+      if (interupt) {
+        drive(new ChassisSpeeds(0, 0, 0), false);
+      }
+    });
+  }
+
+  //returns pathplanner waypoint with direction of travel away from associated reefside
+  private Pose2d getWaypointFromBranch(Pose2d branch){
+    return new Pose2d(
+      branch.getTranslation(),
+      branch.getRotation().rotateBy(Rotation2d.k180deg)
+    );
+  }
+
+  //returns target branch pos/coords
+  private static Pose2d getBranchFromTag(Pose2d tag, BranchSide side) {
+    var translation = tag.getTranslation().plus(
+      new Translation2d(
+        side.tagOffset.getY(),
+        side.tagOffset.getX()
+      ).rotateBy(tag.getRotation())
+    );
+
+    return new Pose2d(
+      translation.getX(),
+      translation.getY(),
+      tag.getRotation()
+    );
+  }
+
+
+
 }
