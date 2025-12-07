@@ -102,30 +102,32 @@ public class RobotContainer {
    * {@link JoystickButton}.
    */
   private void configureButtonBindings() {
-    //new JoystickButton(m_driverController, Button.kR1.value)
+    
     m_driverController.x()
         .whileTrue(new RunCommand(
             () -> m_robotDrive.setX(),
             m_robotDrive));
     
-     runAutoConsoleFalse();
-    //new Trigger(DriverStation::isDisabled)
-    //new Trigger(RobotModeTriggers.disabled())
+    runAutoConsoleFalse();
+    
     new Trigger(trgAutoSelect())
-      .whileTrue(m_AutonomousSubsystem.cmdAutoSelect());
+      .whileTrue(m_AutonomousSubsystem.selectAuto())
+    ;
+
     runAutoConsoleTrue();
 
     new Trigger(RobotModeTriggers.disabled())
       .onTrue(Commands.runOnce(this::runAutoConsoleTrue)
-        .ignoringDisable(true))
-      ;
+      .ignoringDisable(true))
+    ;
 
     new Trigger(RobotModeTriggers.disabled())
-    .onFalse(Commands.runOnce(this::runAutoConsoleFalse))
+      .onFalse(Commands.runOnce(this::runAutoConsoleFalse))
     ;
-  m_driverController.a().onTrue(m_robotDrive.driveToBranch(BranchSide.LEFT));
+  
+    m_driverController.a().onTrue(m_robotDrive.driveToBranch(BranchSide.LEFT));
 
-  m_driverController.b().onTrue(m_robotDrive.driveToBranch(BranchSide.RIGHT));
+    m_driverController.b().onTrue(m_robotDrive.driveToBranch(BranchSide.RIGHT));
 
     m_operatorController.a() 
         .onTrue(m_elevator.cmdSetElevatorPosition(ElevatorConstants.kTroughInches, m_HandSubsystem.isHandDownSplr()));
@@ -166,7 +168,6 @@ public class RobotContainer {
   }
 
   private static Trigger trgAutoSelect() {
-    //System.out.println("bool auto console" + m_runAutoConsole);
     return new Trigger(() -> m_runAutoConsole);
   }
 
@@ -183,7 +184,7 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return m_AutonomousSubsystem.cmdAutoControl();
+    return m_AutonomousSubsystem.runAuto();
   }
 
 }

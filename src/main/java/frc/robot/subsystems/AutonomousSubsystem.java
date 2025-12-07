@@ -55,18 +55,18 @@ public class AutonomousSubsystem extends SubsystemBase{
     HAND_SCORE("HS", 0.0, "")
     ;
 
-    private final String m_stepCmd;
+    private final String m_stepCmdType;
     private final double m_waitTime;
     private final String m_planName;
 
-    private AutoStep(String cstepCmd, double dWaitTime, String planName) {
-      this.m_stepCmd = cstepCmd;
-      this.m_waitTime = dWaitTime;
+    private AutoStep(String stepCmdType, double waitTime, String planName) {
+      this.m_stepCmdType = stepCmdType;
+      this.m_waitTime = waitTime;
       this.m_planName = planName;
     }
 
-    public String getStepStruc() {
-      return m_stepCmd;
+    public String getCmdType() {
+      return m_stepCmdType;
     }
 
     public double getWaitTIme() {
@@ -125,18 +125,22 @@ public class AutonomousSubsystem extends SubsystemBase{
 
   }
 
+  // save for passed in control box and subsystems
   ConsoleAuto m_ConsoleAuto;
   RobotContainer m_robotContainer;
   DriveSubsystem m_drive;
   ElevatorSubsystem m_elevator;
   HandSubsystem m_hand;
 
+  // work for plan selection
   AutoPlans m_autoPlans[] = AutoPlans.values();
   AutoPlans m_selectedPlan;
 
   private String m_selectedPlanName = "n/a";
   private int m_iWaitCount;
 
+  // work for plan steps for current plan selection
+  // used in dashboard display for step selection
   private int kSTEP_MAX = 12;
   private PlanStep[] m_autoStep = new PlanStep[kSTEP_MAX];
   private String[] m_strStepList = new String[kSTEP_MAX];
@@ -148,6 +152,11 @@ public class AutonomousSubsystem extends SubsystemBase{
 
   private PlanStep[][] m_planSteps;
 
+  // constructor
+  /*
+   * pass in the control box and required subsystems
+   * 
+   */
   public AutonomousSubsystem(ConsoleAuto consoleAuto,
         RobotContainer robotContainer,
         DriveSubsystem drive,
@@ -163,6 +172,7 @@ public class AutonomousSubsystem extends SubsystemBase{
     m_selectedPlanName = m_selectedPlan.toString();
     m_iPatternSelect = 0;
 
+    // set up dashboard display
     for (int iat = 0; iat < kSTEP_MAX; iat++) {
       initStepList(iat);
       fmtDisplay(iat);
@@ -170,9 +180,13 @@ public class AutonomousSubsystem extends SubsystemBase{
   
 /*
  *  CRITICAL PIECE
- * This two dimensional array defines the steps for each selectable Auto pattern
+ * This two dimensional array defines the steps for each selectable Auto Plan
  * First dimension is set by the ConsoleAuto selector switch (passed in via POV 0)
  * Second dimension is the sequence of the possible step(s) for the pattern
+ * 
+ * data elements are from the AutoStep ENUM of steps, run if true switch, and run if false switch
+ * the switch numbers are optional, although if the false one is used, then the true is required
+ * 
  */
     m_planSteps = new PlanStep[][] {
       //DRIVE OUT
@@ -233,7 +247,14 @@ public class AutonomousSubsystem extends SubsystemBase{
     }
   }
    
-
+/*
+ * method to handle building the plan step selection
+ * called by command running while disabled
+ * 
+ * saves the possible steps for the selected AutoPlan
+ * tests true/false switches to set step selection
+ * 
+ */
   public void selectAutoCommand() {
 
     int autoSelectIx = m_ConsoleAuto.getROT_SW_0();
@@ -265,6 +286,10 @@ public class AutonomousSubsystem extends SubsystemBase{
 
   }
 
+  /*
+   * return a string value of the true/false switches for the step
+   * used to display on the dashboard for reference
+   */
   private String getStepSwitch(PlanStep stepName) {
     String stepSwName = "";
     int stepSwitch = stepName.getASwitch();
@@ -278,6 +303,9 @@ public class AutonomousSubsystem extends SubsystemBase{
     return stepSwName;
   }
     
+  /*
+   * return true/false for step selection based on switch settings
+   */
   private boolean getStepBoolean(PlanStep stepName) {
     boolean stepBool = true;
     int stepSwitch = stepName.getASwitch();
@@ -296,7 +324,7 @@ public class AutonomousSubsystem extends SubsystemBase{
    * Command to run the Auto selection process with Operator Console interaction
    * This should be handled by a trigger that is started on Disabled status
    */
-  public Command cmdAutoSelect() {
+  public Command selectAuto() {
     return Commands.run(this::selectAutoCommand, this)
           .ignoringDisable(true);
   }
@@ -308,7 +336,7 @@ public class AutonomousSubsystem extends SubsystemBase{
    * returns the group 
    * 
   */
-  public Command cmdAutoControl() {
+  public Command runAuto() {
 
     SequentialCommandGroup autoCmd = new SequentialCommandGroup();
     System.out.println("Cmd Count " + m_iCmdCount);
@@ -318,19 +346,23 @@ public class AutonomousSubsystem extends SubsystemBase{
         //System.out.print("Selected command " + ix);
         //System.out.println("-" + m_strStepList[ix]);
         autoCmd.addCommands(Commands.print("Starting: " + m_strStepList[ix]));
-        autoCmd.addCommands(getAutoCmd(m_autoStep[ix].getAutoStep()));
+        autoCmd.addCommands(autoStepCmd(m_autoStep[ix].getAutoStep()));
         autoCmd.addCommands(Commands.print("Just completed: " + m_strStepList[ix]));
       }
     }
 
-    //SequentialCommandGroup autoCmd = new SequentialCommandGroup(autoCmdList);
     return autoCmd;
    
   }
-  private Command getAutoCmd(AutoStep autoStep) {
+
+  /*
+   * Return the Command for each selected step
+   * 
+   */
+  private Command autoStepCmd(AutoStep autoStep) {
 
     Command workCmd = Commands.print("command not found for " + autoStep.name());
-    switch (autoStep.getStepStruc()) {
+    switch (autoStep.getCmdType()) {
       case "W":
         double waitTime = autoStep.getWaitTIme();
         System.out.println("Wait time " + autoStep.getWaitTIme());
