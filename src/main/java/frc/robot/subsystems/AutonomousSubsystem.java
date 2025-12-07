@@ -15,20 +15,21 @@ import frc.robot.subsystems.DriveSubsystem.BranchSide;
 public class AutonomousSubsystem extends SubsystemBase{
 
   // limited by the rotary switch settings of 6 and POV max of 8.
-  public enum AutoPlans {
+  public enum AutoPlan {
     DRIVEOUT,
     REEFCENTER,
     REEFLEFT,
     REEFRIGHT
     ;
 
-    public String getSelectName() {
+    /*public String getSelectName() {
         return this.toString();
     }
 
     public int getSelectIx() {
         return this.ordinal();
     }
+        */
   }
 
   /*
@@ -45,36 +46,54 @@ public class AutonomousSubsystem extends SubsystemBase{
    * after that they should be paths only
    */
   public enum AutoStep {
-    WAIT1("W", 1.0, ""),
-    WAIT2("W", 2.0, ""),
-    WAITLOOP("W", 99.9, ""),
-    DRIVE_OUT("D", 0.0, "drive out - Auto"),
-    DRIVE_REEF_LEFT("D", 0.0, "reef barge left - auto"),
-    ELEVATOR_LVL4("L", 0.0, ""),
-    DRIVE_TO_REEF_RIGHT("D2R", 0.0, ""),
-    HAND_SCORE("HS", 0.0, "")
+    WAIT1("W", 1.0),
+    WAIT2("W", 2.0),
+    WAITLOOP("W", 99.9),
+    DRIVE_OUT("D", "drive out - Auto"),
+    DRIVE_REEF_LEFT("D", "reef barge left - auto"),
+    ELEVATOR_LVL4("L"),
+    DRIVE_TO_REEF_RIGHT("D2R"),
+    HAND_SCORE("HS")
     ;
 
-    private final String m_stepCmdType;
+    private final String m_cmdType;
     private final double m_waitTime;
-    private final String m_planName;
+    private final String m_actionName;
 
-    private AutoStep(String stepCmdType, double waitTime, String planName) {
-      this.m_stepCmdType = stepCmdType;
+    private AutoStep(String cmdType) {
+      this.m_cmdType = cmdType;
+      this.m_actionName = "";
+      this.m_waitTime = 0.0;
+    }
+
+    private AutoStep(String cmdType, double waitTime) {
+      this.m_cmdType = cmdType;
       this.m_waitTime = waitTime;
-      this.m_planName = planName;
+      this.m_actionName = "";
+    }
+
+    private AutoStep(String cmdType, String actionName) {
+      this.m_cmdType = cmdType;
+      this.m_waitTime = 0.0;
+      this.m_actionName = actionName;
+    }
+
+    private AutoStep(String cmdType, double waitTime, String actionName) {
+      this.m_cmdType = cmdType;
+      this.m_waitTime = waitTime;
+      this.m_actionName = actionName;
     }
 
     public String getCmdType() {
-      return m_stepCmdType;
+      return m_cmdType;
     }
 
     public double getWaitTIme() {
       return m_waitTime;
     }
 
-    public String getplanName() {
-      return m_planName;
+    public String getActionName() {
+      return m_actionName;
     }
   }
 
@@ -133,8 +152,8 @@ public class AutonomousSubsystem extends SubsystemBase{
   HandSubsystem m_hand;
 
   // work for plan selection
-  AutoPlans m_autoPlans[] = AutoPlans.values();
-  AutoPlans m_selectedPlan;
+  AutoPlan m_autoPlans[] = AutoPlan.values();
+  AutoPlan m_selectedPlan;
 
   private String m_selectedPlanName = "n/a";
   private int m_iWaitCount;
@@ -146,7 +165,7 @@ public class AutonomousSubsystem extends SubsystemBase{
   private String[] m_strStepList = new String[kSTEP_MAX];
   private String[] m_strStepSwitch = new String[kSTEP_MAX];
   private boolean[] m_bStepSWList = new boolean[kSTEP_MAX];
-  private int m_iCmdCount = 0;
+
 
   private int m_iPatternSelect;
 
@@ -257,30 +276,24 @@ public class AutonomousSubsystem extends SubsystemBase{
  */
   public void selectAutoCommand() {
 
-    int autoSelectIx = m_ConsoleAuto.getROT_SW_0();
-    m_iPatternSelect = autoSelectIx;
-    if (autoSelectIx >= m_planSteps.length) {
-      autoSelectIx = 0;
+    m_iPatternSelect = m_ConsoleAuto.getROT_SW_0();
+    if (m_iPatternSelect >= m_planSteps.length) {
       m_iPatternSelect = 0;
     }
 
-    m_selectedPlan = m_autoPlans[autoSelectIx];
+    m_selectedPlan = m_autoPlans[m_iPatternSelect];
     m_selectedPlanName = m_selectedPlan.toString();
 
     m_iWaitCount = m_ConsoleAuto.getROT_SW_1();
 
     // save the possible step list for the selected pattern to a work list
-    m_iCmdCount = 0;
-    for (int ix = 0; ix < m_planSteps[autoSelectIx].length; ix++) {
-      m_autoStep[ix] = m_planSteps[autoSelectIx][ix];
+    for (int ix = 0; ix < m_planSteps[m_iPatternSelect].length; ix++) {
+      m_autoStep[ix] = m_planSteps[m_iPatternSelect][ix];
       m_strStepList[ix] = m_autoStep[ix].getAutoStep().name();
       m_strStepSwitch[ix] = getStepSwitch(m_autoStep[ix]);
       m_bStepSWList[ix] = getStepBoolean(m_autoStep[ix]);
-      if (m_bStepSWList[ix]) {
-        m_iCmdCount++;
-      }
     }
-    for (int ix = m_planSteps[autoSelectIx].length; ix < kSTEP_MAX; ix++) {
+    for (int ix = m_planSteps[m_iPatternSelect].length; ix < kSTEP_MAX; ix++) {
       initStepList(ix);
     }
 
@@ -339,7 +352,6 @@ public class AutonomousSubsystem extends SubsystemBase{
   public Command runAuto() {
 
     SequentialCommandGroup autoCmd = new SequentialCommandGroup();
-    System.out.println("Cmd Count " + m_iCmdCount);
 
     for (int ix = 0; ix < m_planSteps[m_iPatternSelect].length; ix++) {
       if (m_bStepSWList[ix]) {
@@ -374,7 +386,7 @@ public class AutonomousSubsystem extends SubsystemBase{
 
         break;
       case "D":
-        workCmd =  m_drive.getPathStep(autoStep.getplanName());
+        workCmd =  m_drive.getPathStep(autoStep.getActionName());
         break;
       case "L":
         // build sequence to raise elevator, move hand up, and wait until elevator is in position
